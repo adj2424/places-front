@@ -70,6 +70,13 @@
   color: var(--text-h);
 }
 
+.search-form__row input[type='text']:disabled,
+.search-form__row input[type='number']:disabled {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 82%, var(--border));
+  cursor: not-allowed;
+}
+
 .search-form__types {
   margin: 0;
   padding: 0.75rem 0 0;
@@ -131,7 +138,6 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem;
-  min-height: 22rem;
 }
 
 .place-list ul {
@@ -140,6 +146,8 @@
   padding: 0;
   display: grid;
   gap: 0.75rem;
+  max-height: 28rem;
+  overflow: auto;
 }
 
 .place-list__meta,
@@ -174,5 +182,9 @@
 
   .search-area-map__canvas {
     height: 18rem;
+  }
+
+  .place-list ul {
+    max-height: 18rem;
   }
 }

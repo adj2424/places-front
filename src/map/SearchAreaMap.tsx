@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Circle, CircleMarker, MapContainer, TileLayer, useMap } from 'react-leaflet'
-import L from 'leaflet'
+import { boundsForSearchArea } from './search-area-bounds'
 import 'leaflet/dist/leaflet.css'
 
 export type SearchAreaMapProps = {
@@ -20,8 +20,10 @@ function FitToCircle({
   const map = useMap()
 
   useEffect(() => {
-    const circle = L.circle([origin.lat, origin.lng], { radius: radiusMeters })
-    map.fitBounds(circle.getBounds(), { padding: [28, 28], maxZoom: 16 })
+    map.fitBounds(boundsForSearchArea(origin, radiusMeters), {
+      padding: [28, 28],
+      maxZoom: 16,
+    })
   }, [map, origin.lat, origin.lng, radiusMeters])
 
   return null

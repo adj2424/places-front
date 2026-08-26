@@ -159,7 +159,7 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
           type="text"
           name="address"
           autoComplete="street-address"
-          value={address}
+          value={mode === 'location' ? 'Your Location' : address}
           disabled={disabled || mode !== 'address'}
           onChange={(event) => setAddress(event.target.value)}
           placeholder="Street, city, or place"

@@ -53,6 +53,35 @@ describe('PlaceList', () => {
     expect(screen.getByText('2 places')).toBeTruthy()
   })
 
+  it('keeps heading, count, and both cards for a two-place result', () => {
+    render(
+      <PlaceList
+        status="success"
+        places={[cafe, { id: 'place-2', name: 'Bakery' }]}
+        total={2}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Results' })).toBeTruthy()
+    expect(screen.getByText('2 places')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Cafe Luna' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Bakery' })).toBeTruthy()
+  })
+
+  it('renders every place in a long list', () => {
+    const places = Array.from({ length: 20 }, (_, i) => ({
+      id: `place-${i + 1}`,
+      name: `Place ${i + 1}`,
+    }))
+
+    render(<PlaceList status="success" places={places} total={places.length} />)
+
+    expect(screen.getByText('20 places')).toBeTruthy()
+    for (const place of places) {
+      expect(screen.getByRole('heading', { name: place.name })).toBeTruthy()
+    }
+  })
+
   it('does not show previous rows while loading', () => {
     const { rerender } = render(
       <PlaceList status="success" places={[cafe]} total={1} />,
