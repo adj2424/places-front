@@ -34,7 +34,7 @@ export type FindPlacesSuccess = {
 
 export type FindPlacesFailure = {
   ok: false
-  kind: 'retryable'
+  kind: 'retryable' | 'invalid'
 }
 
 export type FindPlacesResult = FindPlacesSuccess | FindPlacesFailure

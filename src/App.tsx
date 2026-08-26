@@ -11,6 +11,15 @@ import './App.css'
 
 const SearchAreaMap = lazy(() => import('./map/SearchAreaMap'))
 
+const MAP_MISS_NOTICE =
+  'Could not place this address on the map. Search results are still shown.'
+
+type SearchFlags = {
+  generation: number
+  placesOk: boolean | null
+  nominatimMissed: boolean
+}
+
 function originFromBody(body: FindPlacesRequest): LatLng | null {
   if ('latitude' in body) {
     return { lat: body.latitude, lng: body.longitude }
@@ -20,6 +29,11 @@ function originFromBody(body: FindPlacesRequest): LatLng | null {
 
 export default function App() {
   const requestGeneration = useRef(0)
+  const searchFlags = useRef<SearchFlags>({
+    generation: 0,
+    placesOk: null,
+    nominatimMissed: false,
+  })
   const [status, setStatus] = useState<PlaceListStatus>('idle')
   const [places, setPlaces] = useState<NearbyPlace[]>([])
   const [total, setTotal] = useState<number | null>(null)
@@ -27,8 +41,23 @@ export default function App() {
   const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS_METERS)
   const [mapNotice, setMapNotice] = useState<string | null>(null)
 
+  function showMapMissNoticeIfSearchSucceeded(generation: number) {
+    const flags = searchFlags.current
+    if (flags.generation !== generation) {
+      return
+    }
+    if (flags.placesOk === true && flags.nominatimMissed) {
+      setMapNotice(MAP_MISS_NOTICE)
+    }
+  }
+
   async function handleSearch(body: FindPlacesRequest) {
     const generation = ++requestGeneration.current
+    searchFlags.current = {
+      generation,
+      placesOk: null,
+      nominatimMissed: false,
+    }
     setPlaces([])
     setTotal(null)
     setStatus('loading')
@@ -48,9 +77,8 @@ export default function App() {
           setOrigin(resolved)
           return
         }
-        setMapNotice(
-          'Could not place this address on the map. Search results are still shown.',
-        )
+        searchFlags.current.nominatimMissed = true
+        showMapMissNoticeIfSearchSucceeded(generation)
       })
     }
 
@@ -60,15 +88,19 @@ export default function App() {
     }
 
     if (!result.ok) {
+      searchFlags.current.placesOk = false
       setPlaces([])
       setTotal(null)
-      setStatus('error')
+      setStatus(result.kind === 'invalid' ? 'invalid' : 'error')
+      setMapNotice(null)
       return
     }
 
+    searchFlags.current.placesOk = true
     setPlaces(result.data.places)
     setTotal(result.data.total)
     setStatus('success')
+    showMapMissNoticeIfSearchSucceeded(generation)
   }
 
   return (

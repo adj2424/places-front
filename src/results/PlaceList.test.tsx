@@ -93,4 +93,42 @@ describe('PlaceList', () => {
     expect(screen.getByText(/searching nearby places/i)).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Cafe Luna' })).toBeNull()
   })
+
+  it('shows invalid-search copy and not retryable copy', () => {
+    render(<PlaceList status="invalid" places={[]} total={null} />)
+
+    expect(
+      screen.getByText(
+        'We couldn’t find that address. Check the spelling and try again.',
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.queryByText('Search couldn’t be completed. Try again in a moment.'),
+    ).toBeNull()
+  })
+
+  it('shows retryable copy and not invalid-search copy', () => {
+    render(<PlaceList status="error" places={[]} total={null} />)
+
+    expect(
+      screen.getByText('Search couldn’t be completed. Try again in a moment.'),
+    ).toBeTruthy()
+    expect(
+      screen.queryByText(
+        'We couldn’t find that address. Check the spelling and try again.',
+      ),
+    ).toBeNull()
+  })
+
+  it('does not render a Retry control for either failure', () => {
+    const { rerender } = render(
+      <PlaceList status="invalid" places={[]} total={null} />,
+    )
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /retry/i })).toBeNull()
+
+    rerender(<PlaceList status="error" places={[]} total={null} />)
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /retry/i })).toBeNull()
+  })
 })

@@ -1,6 +1,6 @@
 import type { NearbyPlace } from '../places/types'
 
-export type PlaceListStatus = 'idle' | 'loading' | 'success' | 'error'
+export type PlaceListStatus = 'idle' | 'loading' | 'success' | 'invalid' | 'error'
 
 export type PlaceListProps = {
   status: PlaceListStatus
@@ -31,12 +31,23 @@ export function PlaceList({ status, places, total }: PlaceListProps) {
     )
   }
 
+  if (status === 'invalid') {
+    return (
+      <section className="place-list" aria-live="assertive">
+        <h2>Results</h2>
+        <p className="place-list__error">
+          We couldn’t find that address. Check the spelling and try again.
+        </p>
+      </section>
+    )
+  }
+
   if (status === 'error') {
     return (
       <section className="place-list" aria-live="assertive">
         <h2>Results</h2>
         <p className="place-list__error">
-          Search failed. Check that Places is running and try again.
+          Search couldn’t be completed. Try again in a moment.
         </p>
       </section>
     )

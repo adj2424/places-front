@@ -4,7 +4,7 @@ import type {
   NearbyPlace,
 } from './types'
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:3000'
+const DEFAULT_BASE_URL = 'http://127.0.0.1:3001'
 
 function resolveBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_PLACES_BASE_URL
@@ -21,6 +21,38 @@ function isNearbyPlace(value: unknown): value is NearbyPlace {
   return typeof (value as { id?: unknown }).id === 'string'
 }
 
+function isAddressRequest(body: FindPlacesRequest): boolean {
+  return 'address' in body
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json()
+  } catch {
+    return undefined
+  }
+}
+
+function failureKind(
+  status: number,
+  payload: unknown,
+  body: FindPlacesRequest,
+): 'retryable' | 'invalid' {
+  if (status !== 400) {
+    return 'retryable'
+  }
+  if (typeof payload !== 'object' || payload === null) {
+    return 'retryable'
+  }
+  if (typeof (payload as { error?: unknown }).error !== 'string') {
+    return 'retryable'
+  }
+  if (!isAddressRequest(body)) {
+    return 'retryable'
+  }
+  return 'invalid'
+}
+
 export async function findPlaces(
   body: FindPlacesRequest,
 ): Promise<FindPlacesResult> {
@@ -32,13 +64,12 @@ export async function findPlaces(
     })
 
     if (!response.ok) {
-      return { ok: false, kind: 'retryable' }
+      const payload = await readJson(response)
+      return { ok: false, kind: failureKind(response.status, payload, body) }
     }
 
-    let payload: unknown
-    try {
-      payload = await response.json()
-    } catch {
+    const payload = await readJson(response)
+    if (payload === undefined) {
       return { ok: false, kind: 'retryable' }
     }
 

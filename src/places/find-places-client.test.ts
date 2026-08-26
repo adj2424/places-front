@@ -6,6 +6,12 @@ const addressBody: FindPlacesRequest = {
   radiusMeters: 1000,
 }
 
+const coordinatesBody: FindPlacesRequest = {
+  latitude: 37.422,
+  longitude: -122.084,
+  radiusMeters: 1000,
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -41,7 +47,7 @@ describe('findPlaces', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      'http://127.0.0.1:3000/find-places',
+      'http://127.0.0.1:3001/find-places',
     )
     expect(result).toEqual({
       ok: true,
@@ -124,5 +130,68 @@ describe('findPlaces', () => {
         total: 1,
       },
     })
+  })
+
+  it('treats address-mode 400 with a string error as invalid', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(400, { error: 'google geocoding invalid address' }),
+      ),
+    )
+
+    const result = await findPlaces(addressBody)
+
+    expect(result).toEqual({ ok: false, kind: 'invalid' })
+  })
+
+  it('treats address-mode 400 with an error array as retryable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(400, { error: [] })),
+    )
+
+    const result = await findPlaces(addressBody)
+
+    expect(result).toEqual({ ok: false, kind: 'retryable' })
+  })
+
+  it('treats coordinates-mode 400 with a string error as retryable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(400, { error: 'google geocoding invalid address' }),
+      ),
+    )
+
+    const result = await findPlaces(coordinatesBody)
+
+    expect(result).toEqual({ ok: false, kind: 'retryable' })
+  })
+
+  it('treats 502 places-unavailable JSON as retryable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(502, { error: 'google places service unavailable' }),
+      ),
+    )
+
+    const result = await findPlaces(addressBody)
+
+    expect(result).toEqual({ ok: false, kind: 'retryable' })
+  })
+
+  it('treats 502 geocoding-unavailable JSON as retryable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse(502, { error: 'google geocoding service unavailable' }),
+      ),
+    )
+
+    const result = await findPlaces(addressBody)
+
+    expect(result).toEqual({ ok: false, kind: 'retryable' })
   })
 })

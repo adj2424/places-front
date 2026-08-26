@@ -8,6 +8,10 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    port: 3000,
+    strictPort: true,
+  },
   test: {
     environment: 'jsdom',
     globals: true,
