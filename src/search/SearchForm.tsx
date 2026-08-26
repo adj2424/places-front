@@ -11,6 +11,9 @@ import {
 import type { SearchMode } from './search-request'
 import type { FindPlacesRequest } from '../places/types'
 
+const fieldInputClass =
+  'w-full max-w-md rounded-lg border border-border bg-bg px-3 py-2 text-heading disabled:cursor-not-allowed disabled:bg-border/40 disabled:text-muted'
+
 type SearchFormProps = {
   disabled?: boolean
   onSubmitSearch: (body: FindPlacesRequest) => void
@@ -120,10 +123,16 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
   }
 
   return (
-    <form className="search-form" onSubmit={handleSubmit}>
-      <fieldset className="search-form__modes" disabled={disabled}>
-        <legend className="visually-hidden">Search origin</legend>
-        <label>
+    <form
+      className="mb-5 grid gap-4 rounded-xl border border-border bg-surface p-4 shadow-panel"
+      onSubmit={handleSubmit}
+    >
+      <fieldset
+        className="m-0 flex flex-wrap gap-4 border-0 p-0"
+        disabled={disabled}
+      >
+        <legend className="sr-only">Search origin</legend>
+        <label className="flex items-center gap-1.5">
           <input
             type="radio"
             name="search-mode"
@@ -133,7 +142,7 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
           />
           Address
         </label>
-        <label>
+        <label className="flex items-center gap-1.5">
           <input
             type="radio"
             name="search-mode"
@@ -147,18 +156,19 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
       </fieldset>
 
       {locationError ? (
-        <p className="search-form__notice" role="status">
+        <p className="text-danger" role="status">
           {locationError}
         </p>
       ) : null}
 
-      <div className="search-form__row">
+      <div className="grid gap-1.5">
         <label htmlFor={addressId}>Address</label>
         <input
           id={addressId}
           type="text"
           name="address"
           autoComplete="street-address"
+          className={fieldInputClass}
           value={mode === 'location' ? 'Your Location' : address}
           disabled={disabled || mode !== 'address'}
           onChange={(event) => setAddress(event.target.value)}
@@ -166,7 +176,7 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
         />
       </div>
 
-      <div className="search-form__row">
+      <div className="grid gap-1.5">
         <label htmlFor={radiusId}>Radius (meters)</label>
         <input
           id={radiusId}
@@ -175,17 +185,23 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
           min={MIN_RADIUS_METERS}
           max={MAX_RADIUS_METERS}
           step={1}
+          className={fieldInputClass}
           value={Number.isFinite(radiusMeters) ? radiusMeters : ''}
           disabled={disabled}
           onChange={(event) => setRadiusMeters(readRadius(event.target.value))}
         />
       </div>
 
-      <fieldset className="search-form__types" disabled={disabled}>
-        <legend>Categories (optional)</legend>
-        <div className="search-form__type-grid">
+      <fieldset
+        className="m-0 border-0 border-t border-border p-0 pt-3"
+        disabled={disabled}
+      >
+        <legend className="p-0 font-semibold text-heading">
+          Categories (optional)
+        </legend>
+        <div className="mt-2.5 grid grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))] gap-x-3 gap-y-2">
           {PRIMARY_TYPE_KEYS.map((key) => (
-            <label key={key}>
+            <label key={key} className="flex items-center gap-1.5">
               <input
                 type="checkbox"
                 name="primaryTypes"
@@ -199,7 +215,11 @@ export function SearchForm({ disabled = false, onSubmitSearch }: SearchFormProps
         </div>
       </fieldset>
 
-      <button type="submit" disabled={!canSubmit}>
+      <button
+        type="submit"
+        className="cursor-pointer justify-self-start rounded-lg border-0 bg-accent px-4 py-2.5 text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-55"
+        disabled={!canSubmit}
+      >
         {locating ? 'Locating…' : 'Search nearby'}
       </button>
     </form>

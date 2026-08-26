@@ -8,6 +8,9 @@ export type PlaceListProps = {
   total: number | null
 }
 
+const panel = 'rounded-xl border border-border bg-surface p-4'
+const heading = 'mb-2 text-lg font-semibold tracking-tight text-heading'
+
 function mapsSearchUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 }
@@ -15,27 +18,27 @@ function mapsSearchUrl(address: string): string {
 export function PlaceList({ status, places, total }: PlaceListProps) {
   if (status === 'idle') {
     return (
-      <section className="place-list" aria-live="polite">
-        <h2>Results</h2>
-        <p>Search nearby to see places here.</p>
+      <section className={panel} aria-live="polite">
+        <h2 className={heading}>Results</h2>
+        <p className="text-muted">Search nearby to see places here.</p>
       </section>
     )
   }
 
   if (status === 'loading') {
     return (
-      <section className="place-list" aria-live="polite" aria-busy="true">
-        <h2>Results</h2>
-        <p>Searching nearby places…</p>
+      <section className={panel} aria-live="polite" aria-busy="true">
+        <h2 className={heading}>Results</h2>
+        <p className="text-muted">Searching nearby places…</p>
       </section>
     )
   }
 
   if (status === 'invalid') {
     return (
-      <section className="place-list" aria-live="assertive">
-        <h2>Results</h2>
-        <p className="place-list__error">
+      <section className={panel} aria-live="assertive">
+        <h2 className={heading}>Results</h2>
+        <p className="text-danger">
           We couldn’t find that address. Check the spelling and try again.
         </p>
       </section>
@@ -44,9 +47,9 @@ export function PlaceList({ status, places, total }: PlaceListProps) {
 
   if (status === 'error') {
     return (
-      <section className="place-list" aria-live="assertive">
-        <h2>Results</h2>
-        <p className="place-list__error">
+      <section className={panel} aria-live="assertive">
+        <h2 className={heading}>Results</h2>
+        <p className="text-danger">
           Search couldn’t be completed. Try again in a moment.
         </p>
       </section>
@@ -57,32 +60,37 @@ export function PlaceList({ status, places, total }: PlaceListProps) {
 
   if (places.length === 0) {
     return (
-      <section className="place-list" aria-live="polite">
-        <h2>Results</h2>
-        <p>No places found in this area.</p>
-        <p className="place-list__meta">{count} results</p>
+      <section className={panel} aria-live="polite">
+        <h2 className={heading}>Results</h2>
+        <p className="text-muted">No places found in this area.</p>
+        <p className="text-muted">{count} results</p>
       </section>
     )
   }
 
   return (
-    <section className="place-list" aria-live="polite">
-      <h2>Results</h2>
-      <p className="place-list__meta">
+    <section className={panel} aria-live="polite">
+      <h2 className={heading}>Results</h2>
+      <p className="text-muted">
         {count} {count === 1 ? 'place' : 'places'}
       </p>
-      <ul>
+      <ul className="mt-3 grid max-h-72 list-none gap-3 overflow-auto p-0 md:max-h-96">
         {places.map((place) => (
           <li key={place.id}>
-            <article className="place-card">
-              <h3>{place.name?.trim() || 'Unknown place'}</h3>
-              {place.address ? <p>{place.address}</p> : null}
-              <p className="place-card__actions">
+            <article className="border-t border-border pt-3">
+              <h3 className="mb-1 text-base font-semibold tracking-tight text-heading">
+                {place.name?.trim() || 'Unknown place'}
+              </h3>
+              {place.address ? <p className="text-muted">{place.address}</p> : null}
+              <p className="mt-2 flex flex-wrap gap-3">
                 {place.phone ? (
-                  <a href={`tel:${place.phone}`}>Call {place.phone}</a>
+                  <a className="text-accent" href={`tel:${place.phone}`}>
+                    Call {place.phone}
+                  </a>
                 ) : null}
                 {place.address ? (
                   <a
+                    className="text-accent"
                     href={mapsSearchUrl(place.address)}
                     target="_blank"
                     rel="noreferrer"

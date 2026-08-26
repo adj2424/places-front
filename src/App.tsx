@@ -7,8 +7,6 @@ import { SearchForm } from './search/SearchForm'
 import { PlaceList } from './results/PlaceList'
 import type { PlaceListStatus } from './results/PlaceList'
 import { DEFAULT_RADIUS_METERS } from './search/search-request'
-import './App.css'
-
 const SearchAreaMap = lazy(() => import('./map/SearchAreaMap'))
 
 const MAP_MISS_NOTICE =
@@ -104,25 +102,32 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app__header">
-        <h1>Nearby explorer</h1>
-        <p>Search places around an address or your current location.</p>
+    <div className="mx-auto max-w-6xl px-5 py-6 pb-10">
+      <header className="mb-5">
+        <h1 className="mb-1.5 text-3xl font-semibold tracking-tight text-heading">
+          Nearby explorer
+        </h1>
+        <p className="text-muted">
+          Search places around an address or your current location.
+        </p>
       </header>
 
       <SearchForm onSubmitSearch={handleSearch} />
 
       {mapNotice ? (
-        <p className="app__notice" role="status">
+        <p
+          className="mb-4 rounded-lg border border-border bg-surface px-3.5 py-3"
+          role="status"
+        >
           {mapNotice}
         </p>
       ) : null}
 
-      <div className="app__panels">
+      <div className="grid items-start gap-4 md:grid-cols-2">
         <Suspense
           fallback={
-            <div className="search-area-map">
-              <p>Loading map…</p>
+            <div className="min-h-72 overflow-hidden rounded-xl border border-border bg-surface">
+              <p className="p-4 text-muted">Loading map…</p>
             </div>
           }
         >

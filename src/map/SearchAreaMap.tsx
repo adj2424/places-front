@@ -35,12 +35,15 @@ export default function SearchAreaMap({ origin, radiusMeters }: SearchAreaMapPro
     : FALLBACK_CENTER
 
   return (
-    <div className="search-area-map" aria-label="Search area">
+    <div
+      className="min-h-72 overflow-hidden rounded-xl border border-border bg-surface"
+      aria-label="Search area"
+    >
       <MapContainer
         center={center}
         zoom={origin ? 13 : 4}
         scrollWheelZoom
-        className="search-area-map__canvas"
+        className="h-72 w-full md:h-96"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

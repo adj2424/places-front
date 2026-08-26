@@ -24,7 +24,7 @@ There is no `typecheck` script. Typecheck is the `tsc -b` half of `build`. How t
 | Results list | `src/results/` |
 | UI composition / request generation | `src/App.tsx` |
 | Process entry | `src/main.tsx` |
-| Shared layout CSS | `src/App.css` |
+| Panel chrome | Tailwind utilities on JSX; theme tokens in `src/index.css` |
 | Shared vocabulary | `CONCEPTS.md` |
 | Live layout | `docs/architecture.md` |
 | Documented solutions | `docs/solutions/` — category folders with YAML frontmatter (`module`, `tags`, `problem_type`); snapshots vs living docs |
@@ -68,7 +68,7 @@ Layers and hop roles: [docs/architecture.md](./docs/architecture.md). Places JSO
 Point at all four folders plus `App.tsx` — there is no single copy-me feature.
 
 1. Pick the live concern: `search` | `map` | `places` | `results`.
-2. Edit files in that folder. Shared panel CSS is `src/App.css`.
+2. Edit files in that folder. Put panel chrome as Tailwind utilities on the markup. Theme tokens live in `src/index.css`.
 3. Wire state that crosses map and list only in `src/App.tsx`. Do not add a second composition root.
 4. Tests — only if the user asked. Colocate next to the module.
 5. Verify — run existing `npm test` and `npm run build`. Do not add tests to make this step exist.

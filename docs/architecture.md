@@ -16,7 +16,7 @@ src/App.tsx           search state, request generation, panel layout
     └─ src/results/   idle / loading / success / error list
 ```
 
-`src/App.css` holds shared form and panel layout. `src/index.css` is global.
+Panel chrome is Tailwind utilities on JSX. Theme tokens and Tailwind entry live in `src/index.css`. Leaflet vendor CSS stays imported on the search-area map module.
 
 ## Folder roles
 
