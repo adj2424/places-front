@@ -1,6 +1,12 @@
 import type { NearbyPlace } from '../places/types'
 
-export type PlaceListStatus = 'idle' | 'loading' | 'success' | 'invalid' | 'error'
+export type PlaceListStatus =
+  | 'idle'
+  | 'loading'
+  | 'success'
+  | 'invalid'
+  | 'too-many-types'
+  | 'error'
 
 export type PlaceListProps = {
   status: PlaceListStatus
@@ -40,6 +46,17 @@ export function PlaceList({ status, places, total }: PlaceListProps) {
         <h2 className={heading}>Results</h2>
         <p className="text-danger">
           We couldn’t find that address. Check the spelling and try again.
+        </p>
+      </section>
+    )
+  }
+
+  if (status === 'too-many-types') {
+    return (
+      <section className={panel} aria-live="assertive">
+        <h2 className={heading}>Results</h2>
+        <p className="text-danger">
+          Too many categories selected. Deselect some and search again.
         </p>
       </section>
     )

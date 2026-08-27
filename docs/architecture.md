@@ -13,7 +13,7 @@ src/App.tsx           search state, request generation, panel layout
     ├─ src/search/    XOR body, geolocation, category checkboxes
     ├─ src/places/    POST /find-places client, types, catalog keys
     ├─ src/map/       search-area map, Nominatim display geocode
-    └─ src/results/   idle / loading / success / error list
+    └─ src/results/   idle / loading / success / invalid / too-many-types / error list
 ```
 
 Panel chrome is Tailwind utilities on JSX. Theme tokens and Tailwind entry live in `src/index.css`. Leaflet vendor CSS stays imported on the search-area map module.
@@ -25,7 +25,7 @@ Panel chrome is Tailwind utilities on JSX. Theme tokens and Tailwind entry live 
 | Search form + XOR body | `src/search/` | Build `FindPlacesRequest`. Coordinates or address, not both. Radius 1–50000. Catalog keys, not Google type strings. |
 | Places HTTP client | `src/places/` | Browser `fetch` to `VITE_PLACES_BASE_URL` or the default in `find-places-client.ts`. Types and category labels. |
 | Search-area map | `src/map/` | Leaflet origin `CircleMarker` plus radius `Circle`. Fit via `boundsForSearchArea`. Nominatim geocode is map origin only. |
-| Results list | `src/results/` | Live statuses: `idle`, `loading`, `success`, `error`. Call and open-in-maps links. |
+| Results list | `src/results/` | Live statuses: `idle`, `loading`, `success`, `invalid`, `too-many-types`, `error`. Call and open-in-maps links. |
 | Wiring | `src/App.tsx` | Generation guard. Origin vs list. Lazy map. |
 | Entry | `src/main.tsx` | `createRoot` + `StrictMode`. |
 | Tests | colocated `src/<slice>/*.test.ts(x)` | Existing contract tests. |
@@ -42,7 +42,7 @@ Address: Places receives the address string. Nominatim (`src/map/display-geocode
 
 Direct browser `fetch` to `POST /find-places`. No Vite proxy. CORS is an operator plugin (README). Field catalog lives in the sibling API doc, not here.
 
-On the committed tree, `FindPlacesFailure.kind` is only `'retryable'`. PlaceList `'error'` is that bucket. Empty 200 is success.
+`FindPlacesFailure.kind` is `'retryable' | 'invalid' | 'too-many-types'`. PlaceList `'error'` is retryable; `'invalid'` is an unusable address; `'too-many-types'` is category overflow after Places expands keys past Google’s 50 included-primary-types cap. Client mapping lives in `src/places/find-places-client.ts`. Empty 200 is success. Do not paste Places JSON field tables here.
 
 ## Snapshots
 

@@ -6,6 +6,8 @@ import type {
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:3001'
 
+const TOO_MANY_TYPES_ERROR = 'google too many types included in primary types'
+
 function resolveBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_PLACES_BASE_URL
   if (typeof fromEnv === 'string' && fromEnv.trim().length > 0) {
@@ -37,15 +39,19 @@ function failureKind(
   status: number,
   payload: unknown,
   body: FindPlacesRequest,
-): 'retryable' | 'invalid' {
+): 'retryable' | 'invalid' | 'too-many-types' {
   if (status !== 400) {
     return 'retryable'
   }
   if (typeof payload !== 'object' || payload === null) {
     return 'retryable'
   }
-  if (typeof (payload as { error?: unknown }).error !== 'string') {
+  const error = (payload as { error?: unknown }).error
+  if (typeof error !== 'string') {
     return 'retryable'
+  }
+  if (error === TOO_MANY_TYPES_ERROR) {
+    return 'too-many-types'
   }
   if (!isAddressRequest(body)) {
     return 'retryable'

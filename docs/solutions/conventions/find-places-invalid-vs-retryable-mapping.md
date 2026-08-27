@@ -1,6 +1,7 @@
 ---
-title: "Map Places HTTP failures by status, JSON shape, and address vs coordinates — not error text"
+title: "Map Places HTTP failures by status, JSON shape, mode, and one type-cap sentence"
 date: 2026-08-26
+last_updated: 2026-08-26
 category: conventions
 module: places
 problem_type: convention
@@ -8,8 +9,9 @@ component: frontend_stimulus
 severity: medium
 applies_when:
   - "Classifying POST /find-places HTTP misses in the browser client"
-  - "Choosing PlaceList copy for invalid vs retryable vs empty success"
+  - "Choosing PlaceList copy for invalid vs too-many-types vs retryable vs empty success"
   - "Debugging a gibberish address that still shows retryable copy"
+  - "Debugging a type-cap miss that showed address or retryable copy"
   - "Clearing map notice so a Nominatim miss cannot outlive a failed list"
 related_components:
   - "development_workflow"
@@ -17,6 +19,7 @@ related_components:
 tags:
   - "find-places"
   - "invalid-search"
+  - "too-many-types"
   - "retryable-failure"
   - "http-400"
   - "http-500-html"
@@ -24,91 +27,108 @@ tags:
   - "error-mapping"
 ---
 
-# Map Places HTTP failures by status, JSON shape, and address vs coordinates — not error text
+# Map Places HTTP failures by status, JSON shape, mode, and one type-cap sentence
 
 ## Context
 
-Nearby explorer’s Results panel used to collapse every Places miss into one retryable path. Product meaning in `CONCEPTS.md` already distinguishes **Invalid search** (Places could not use the request, typically an address it cannot geocode) from **Retryable failure** (Places or the network could not complete a search the UI already treated as valid to send), and both from a **successful empty list**.
+Nearby explorer classifies `POST /find-places` misses in the browser, then maps a small set of kinds onto Results copy. Collapsing every miss into one retryable path hid unusable addresses. Collapsing every address-mode HTTP 400 `{ error: string }` into **Invalid search** hid a second caller-input miss: selected category keys that Places expands past Google’s included-primary-types cap.
 
-The uncommitted working tree (as of this writing) implements that split. `FindPlacesFailure.kind` is `'retryable' | 'invalid'` (`src/places/types.ts:35-38`). `PlaceListStatus` includes `'invalid'` and `'error'` (`src/results/PlaceList.tsx:3`). `App` maps client `invalid` to list status `'invalid'` and every other failure to `'error'` (`src/App.tsx:90-96`). Committed HEAD still has retryable-only failures; prefer the live files over snapshot plans when they disagree.
+Places (sibling service) maps `TooManyPrimaryTypesError` to HTTP **400** with `{ error: error.message }`. The constructor message is the exact sentence `google too many types included in primary types` (`../places/src/places/domain/errors.ts`). That body uses the same JSON *shape* as an unusable-address 400. Treating every address-mode 400 string as invalid made type-cap look like a spelling problem. Treating every coordinates-mode 400 string as retryable made type-cap look like a down service.
 
-A live debug session showed why matching Places error *text* and treating “gibberish address” as always invalid is unsafe. (session history) Places answered with **500 HTML** rather than 400 JSON `{ error: string }`, so this client correctly treated the miss as retryable. The durable rule is: only address-mode **400 + object payload + string `error`** is invalid; everything else that is not a valid 200 payload is retryable. Do not treat a nonsense address as invalid unless that HTTP shape arrived.
+`CONCEPTS.md` names three distinct miss concepts plus empty success: **Invalid search**, **Too many types**, and **Retryable failure**. Live client kinds match that split: `'retryable' | 'invalid' | 'too-many-types'` (`src/places/types.ts:35-38`). PlaceList statuses are `idle` / `loading` / `success` / `invalid` / `too-many-types` / `error` (`src/results/PlaceList.tsx:3-9`). Client `'retryable'` is wired to PlaceList `'error'` in `App.tsx` — the UI does not use the string `'retryable'`.
 
-The search-area map geocode (Nominatim) is independent of Places. A Places failure must not surface the map-miss notice meant for “Places succeeded but Nominatim could not place the address.”
+A general classifier on `error` text is unsafe. Status and JSON shape stay the primary gates. The only allowed string match is **exact equality** on that one type-cap sentence. Non-400 responses (including HTML 500) stay `'retryable'` (`src/places/find-places-client.ts:43-45`). Sibling `docs/api.md` may lag live mapper strings; this client matches the live sentence constant, not a stale table and not a substring of HTML.
+
+The search-area map geocode (Nominatim) is independent of Places. A Places failure must not leave the map-miss notice that means “Places succeeded but Nominatim could not place the address.”
+
+Do not copy Places’ category-expansion tables into this app. The form cannot know expanded Google type counts. Catalog keys are a short checkbox list (`src/places/catalog.ts`); the cap is on expanded types after Places processes those keys.
 
 ## Guidance
 
-### Three Results outcomes, not two
+### Four Results outcomes after a submitted search
 
-Keep three user-visible outcomes after a submitted search:
+Keep four user-visible outcomes. Do not overload `'invalid'` or `'error'` for type-cap.
 
-1. **Invalid search** — Results status `'invalid'`. Copy: “We couldn’t find that address. Check the spelling and try again.” (`src/results/PlaceList.tsx:34-42`). No Retry button; form submit is the retry.
-2. **Retryable failure** — Results status `'error'`. Copy: “Search couldn’t be completed. Try again in a moment.” (`src/results/PlaceList.tsx:45-53`).
-3. **Empty success** — Results status `'success'` with `places.length === 0`. Copy: “No places found in this area.” (`src/results/PlaceList.tsx:56-65`). This is not an error.
+1. **Invalid search** — PlaceList `status === 'invalid'`. Copy: “We couldn’t find that address. Check the spelling and try again.” (`src/results/PlaceList.tsx:43-51`). No Retry control; form submit is the retry.
+2. **Too many types** — PlaceList `status === 'too-many-types'`. Copy: “Too many categories selected. Deselect some and search again.” (`src/results/PlaceList.tsx:54-62`). Same panel chrome (`aria-live="assertive"`, `text-danger`) as the other failures. Applies in **both** address and coordinates mode because `failureKind` matches the type-cap sentence **before** it branches on request mode (`src/places/find-places-client.ts:53-59`).
+3. **Retryable failure** — PlaceList `status === 'error'`. Copy: “Search couldn’t be completed. Try again in a moment.” (`src/results/PlaceList.tsx:65-73`).
+4. **Empty success** — PlaceList `status === 'success'` with `places.length === 0`. Copy: “No places found in this area.” (`src/results/PlaceList.tsx:78-84`). This is not an error.
 
-Do not reuse `'error'` for unusable addresses, and do not treat an empty 200 as invalid.
+Do not render Places `error` strings in the UI. PlaceList owns the three failure sentences.
 
-### Classify in `findPlaces` by status, shape, and request mode — never by error text
+### Classify in `findPlaces` by status, shape, one sentence, then request mode
 
-`failureKind` (`src/places/find-places-client.ts:36-54`) returns `'invalid'` only when **all** of these hold:
+`failureKind` (`src/places/find-places-client.ts:38-60`) is the only classifier for **non-OK HTTP** responses. Malformed **200** bodies and the outer `fetch` `catch` return `'retryable'` without calling it. For non-OK responses, gate order:
 
-- HTTP status is exactly `400` (any other status → `'retryable'`, lines 41-43)
-- JSON payload is a non-null object (non-object / failed parse → `'retryable'`, lines 44-46)
-- `payload.error` is a **string** (arrays, missing field, non-strings → `'retryable'`, lines 47-49)
-- the request is address-mode (`'address' in body`, lines 24-26 and 50-52)
+1. HTTP status is exactly `400`. Any other status → `'retryable'` (`:43-45`). HTML **500**, **502**, and other non-400 statuses never reach the string match.
+2. JSON payload is a non-null object. Failed `response.json()` becomes `undefined` (`readJson`, `:30-35`); non-object / null → `'retryable'` (`:46-48`).
+3. `payload.error` is a **string**. Missing field, arrays (Zod issue lists), numbers → `'retryable'` (`:49-52`).
+4. If that string **equals** `TOO_MANY_TYPES_ERROR` (`google too many types included in primary types`, `:9`, `:53-55`) → `'too-many-types'` for **both** request modes. Use `===`. Do not substring, trim, case-fold, or invent aliases.
+5. Else if the request is **not** address-mode (`isAddressRequest` at `:26-28`, check at `:56-58`) → `'retryable'`. Other coordinates 400 strings stay retryable.
+6. Else → `'invalid'` (`:59`). Other address 400 strings stay invalid.
 
-Otherwise `'retryable'`. Coordinates-mode 400 with a string `error` is still retryable.
+This is a named exception to “never inspect error text,” not a general classifier.
 
-On `!response.ok`, `findPlaces` returns `{ ok: false, kind: failureKind(...) }` and does not pass Places `error` strings to the UI (`src/places/find-places-client.ts:66-68`). Malformed 200 bodies are retryable (`src/places/find-places-client.ts:71-86`). The outer `catch` around `fetch` is retryable (`src/places/find-places-client.ts:89-91`).
+On `!response.ok`, `findPlaces` returns `{ ok: false, kind: failureKind(...) }` (`:72-74`) and does not pass Places `error` text onward. Malformed **200** bodies (`:77-92`) and the outer `catch` around `fetch` (`:95-97`) are `'retryable'`.
 
-PlaceList owns the two failure sentences. Do not render Places payload text.
+### App wiring: map three kinds; clear map notice on Places failure
 
-### App wiring: map `kind`, clear map notice on Places failure
-
-After `findPlaces` returns and the request generation is still current (`src/App.tsx:85-96`):
+After `findPlaces` returns and the request generation is still current (`src/App.tsx:83-86`), a failure path (`:88-100`):
 
 - `result.kind === 'invalid'` → `setStatus('invalid')`
-- else → `setStatus('error')`
+- `result.kind === 'too-many-types'` → `setStatus('too-many-types')`
+- else → `setStatus('error')` (covers `'retryable'`)
 - always `setPlaces([])`, `setTotal(null)`, `searchFlags.current.placesOk = false`, `setMapNotice(null)`
 
-`MAP_MISS_NOTICE` is only shown when Places succeeded **and** Nominatim missed (`src/App.tsx:14-15`, `44-51`, `99-103`). Nominatim does not classify Places failures.
+`MAP_MISS_NOTICE` is shown only when Places succeeded **and** Nominatim missed (`src/App.tsx:12-13`, `:42-49`, `:103-107`). Nominatim does not classify Places failures.
+
+### What not to do
+
+- Do not copy Places PrimaryTypes expansion into this frontend. Handling is after submit, via the 400 sentence Places already computed.
+- Do not cap catalog checkboxes at Google’s expanded-type limit to “prevent” the miss; that limit is not checkbox count.
+- Do not treat every 400 as invalid. Coordinates-mode 400 with a non-type-cap string is retryable (`find-places-client.ts:56-59`).
+- Do not assume a gibberish address is `'invalid'`. If Places answers with non-400 (for example HTML 500) or non-object JSON, this client stays `'retryable'` (`:43-48`).
 
 ## Why This Matters
 
-- **Wrong bucket trains the user the wrong action.** Invalid search asks for a different address; retryable failure asks to wait and resubmit; empty success says the area has no matches.
-- **Error-text classifiers rot.** Places wording and HTML bodies are not a contract. Status 400 + JSON shape is the stable signal on this client.
-- **All-400-as-invalid is too wide.** Coordinates-mode 400 and 400 with `error` as an array stay retryable.
-- **Independent geocoders.** Showing “Search results are still shown” after Places failed implies results exist. Clearing `mapNotice` on failure (`src/App.tsx:95`) and gating the notice on `placesOk === true` (`src/App.tsx:49-50`) keeps those stories apart.
+- **Wrong bucket trains the wrong action.** Invalid search asks for a different address. Too many types asks to deselect categories. Retryable failure asks to wait and submit again. Empty success says the area has no matches.
+- **A general error-text classifier still rots.** Status `!== 400` short-circuits before any string compare (`find-places-client.ts:43-45`), so HTML 500 stays retryable even if the page contains similar English.
+- **All-400-as-invalid is too wide.** Coordinates-mode 400 and 400 with `error` as a non-string stay retryable unless the type-cap sentence matched first.
+- **Independent geocoders.** Showing “Search results are still shown” after Places failed implies a list exists. Failure always clears the notice (`App.tsx:99`).
 
 ## When to Apply
 
-- Adding or changing Places HTTP error handling, `FindPlacesResult`, or Results status.
-- Debugging “gibberish address looked retryable” or “map said results are still shown but the list is an error.”
-- Touching Nominatim display geocode vs Places `POST /find-places` — keep them independent.
-- Reading `CONCEPTS.md` vs git: product meaning includes Invalid search; committed HEAD may still be retryable-only until this working tree is committed.
+- Adding or changing Places HTTP error handling, `FindPlacesFailure.kind`, `failureKind`, or PlaceList failure status / copy.
+- Debugging “gibberish address looked retryable,” “type-cap looked like a bad address,” “type-cap on current location looked like a down service,” or “map said results are still shown but the list is an error.”
+- Touching Nominatim display geocode vs Places `POST /find-places` — keep classification and notices independent.
+- Refreshing this convention when Places changes the type-cap HTTP status or the exact `error` sentence; update `TOO_MANY_TYPES_ERROR` in lockstep (`find-places-client.ts:9`), do not broaden matching.
 
 ## Examples
 
-### Invalid vs retryable vs empty success
+### Invalid vs too-many-types vs retryable vs empty success
 
 | Situation | Client result | PlaceList status | User-facing copy |
 | --- | --- | --- | --- |
-| Address search, HTTP 400, JSON `{ error: "<any string>" }` | `{ ok: false, kind: 'invalid' }` | `'invalid'` | Couldn’t find that address… |
-| Address search, HTTP 500 HTML / non-JSON | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed… |
-| Address search, HTTP 400, `{ error: [] }` | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed… |
-| Coordinates search, HTTP 400, `{ error: string }` | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed… |
-| `fetch` throws (network / CORS) | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed… |
+| Address or coordinates, HTTP 400, `{ error: "google too many types included in primary types" }` | `{ ok: false, kind: 'too-many-types' }` | `'too-many-types'` | Too many categories selected. Deselect some and search again. |
+| Address search, HTTP 400, JSON `{ error: "<other string>" }` | `{ ok: false, kind: 'invalid' }` | `'invalid'` | We couldn’t find that address. Check the spelling and try again. |
+| Address search, HTTP 500 HTML / non-JSON | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed. Try again in a moment. |
+| Address search, HTTP 400, `{ error: [] }` | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed. Try again in a moment. |
+| Coordinates search, HTTP 400, `{ error: "<other string>" }` | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed. Try again in a moment. |
+| `fetch` throws (network / CORS) | `{ ok: false, kind: 'retryable' }` | `'error'` | Search couldn’t be completed. Try again in a moment. |
 | HTTP 200, `places: []`, `total: 0` | `{ ok: true, data: { places: [], total: 0 } }` | `'success'` | No places found in this area. |
 
-### What did not work (live trap)
+App maps the three kinds (`App.tsx:92-98`): `'invalid'` → `'invalid'`, `'too-many-types'` → `'too-many-types'`, anything else → `'error'`.
 
-- **Classify by error text.** Matching backend strings couples the UI to Places wording. `failureKind` never inspects string contents—only `typeof ... === 'string'` (`src/places/find-places-client.ts:47-48`).
-- **Treat all 400 as invalid.** Coordinates-mode 400 with a string error is retryable (`src/places/find-places-client.ts:50-52`).
-- **Assume a bad-looking address is invalid.** (session history) Places returned 500 HTML instead of 400 JSON. This client only treats **400 JSON** with a string `error` in **address mode** as invalid. Until that shape arrives, the list will show retryable copy even for nonsense addresses.
+### What did not work (live traps)
+
+- **Classify every 400 string by contents.** Only `TOO_MANY_TYPES_ERROR` is matched, and only with `===`. HTML 500 still stays retryable.
+- **Treat all 400 as invalid.** Coordinates-mode 400 with a non-type-cap string is retryable.
+- **Assume a bad-looking address is invalid.** Places may return non-400 HTML instead of 400 JSON.
+- **Cap checkboxes by Google’s expanded-type limit.** That limit is not catalog checkbox count. Handling is the post-submit 400 sentence.
 
 ### Map notice vs Places failure
 
-Places fail → `placesOk = false`; `setMapNotice(null)`; status `invalid` or `error`. Places succeed and Nominatim miss → `MAP_MISS_NOTICE`. Do not set the miss notice while Places is in flight or already failed (`src/App.tsx:44-51`, `90-96`, `99-103`).
+Places fail → `placesOk = false`; `setMapNotice(null)`; status `'invalid'`, `'too-many-types'`, or `'error'` (`App.tsx:88-100`). Places succeed and Nominatim miss → `MAP_MISS_NOTICE`. Do not set the miss notice while Places is in flight or already failed.
 
 ## Related
 

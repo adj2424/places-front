@@ -51,7 +51,7 @@ Layers and hop roles: [docs/architecture.md](./docs/architecture.md). Places JSO
 - Creating, expanding, or rewriting tests.
 - New outbounds besides Places `POST /find-places` and Nominatim display geocode.
 - A Google Maps JS key, persistence, auth, deploy, or exposing the app beyond local use.
-- Implementing unshipped error-handling (`kind: 'invalid'`) unless this request named that work.
+- Changing Places error mapping or Results failure copy unless this request named that work. Live kinds already include `'invalid'` and `'too-many-types'`.
 
 **Never**
 

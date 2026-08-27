@@ -89,7 +89,13 @@ export default function App() {
       searchFlags.current.placesOk = false
       setPlaces([])
       setTotal(null)
-      setStatus(result.kind === 'invalid' ? 'invalid' : 'error')
+      setStatus(
+        result.kind === 'invalid'
+          ? 'invalid'
+          : result.kind === 'too-many-types'
+            ? 'too-many-types'
+            : 'error',
+      )
       setMapNotice(null)
       return
     }

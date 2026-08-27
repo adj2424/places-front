@@ -26,7 +26,10 @@ The disk around the origin defined by the search radius. The map shows it as a c
 A place returned for the current origin and search area. The list is a result of the search, not the source of the map’s center or radius.
 
 ### Invalid search
-Places rejected the search because it could not use the request, typically an address it cannot geocode. Distinct from retryable failure and from a successful empty list. Distinct from form `SearchRequestError` (empty address, invalid radius, missing coordinates). The list tells the explorer to change the address; it does not mean Places or the network failed to run.
+Places rejected the search because it could not use the request, typically an address it cannot geocode. Distinct from too many types, retryable failure, and a successful empty list. Distinct from form `SearchRequestError` (empty address, invalid radius, missing coordinates). The list tells the explorer to change the address; it does not mean Places or the network failed to run, and it does not mean the category set overflowed Google’s type cap.
+
+### Too many types
+Places rejected the search because the selected category keys expand past Google’s included-primary-types cap. Distinct from invalid search and from retryable failure. Distinct from form `SearchRequestError`. The list tells the explorer to deselect some categories and search again; it does not mean the address was unusable or that Places was down. The cap is on expanded Google types, not on how many category checkboxes exist.
 
 ### Retryable failure
-Places or the network could not complete a search that the UI already treated as valid to send. Distinct from invalid search and from a successful empty list. The list tells the explorer to wait and submit again; it does not mean the address was unusable.
+Places or the network could not complete a search that the UI already treated as valid to send. Distinct from invalid search, too many types, and a successful empty list. The list tells the explorer to wait and submit again; it does not mean the address was unusable or that too many categories were selected.
